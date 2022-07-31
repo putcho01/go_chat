@@ -1,6 +1,27 @@
 version: "3.8"
 
 services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    tty: true
+    stdin_open: true
+    ports:
+      - "5173:5173"
+    command: yarn dev
+    environment:
+      - HOST=0.0.0.0 # localhost接続をする際に必要
+      - CHOKIDAR_USEPOLLING=true # ホットリロードを可能にする
+    volumes:
+      - type: bind
+        source: ./client/src
+        target: /usr/app/src
+      - type: volume
+        source: dependencies
+        target: /usr/app/node_modules
+    depends_on:
+      - server
   server:
     build:
       context: ./server
@@ -13,3 +34,5 @@ services:
       - type: bind
         source: ./server/src
         target: /go/app/src
+volumes:
+  dependencies:
