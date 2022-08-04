@@ -1,18 +1,28 @@
 package domain
 
+import (
+	"context"
+
+	"github.com/putcho01/go_chat/src/services"
+)
+
 type Hub struct {
 	Clients      map[*Client]bool //現在の参加者
 	RegisterCh   chan *Client     //入室時
 	UnRegisterCh chan *Client     //退出時
 	BroadcastCh  chan []byte      //送信時
+	pubsub       *services.PubSubService
 }
 
-func NewHub() *Hub {
+const broadCastChan = "broadcast"
+
+func NewHub(pubsub *services.PubSubService) *Hub {
 	return &Hub{
 		Clients:      make(map[*Client]bool),
 		RegisterCh:   make(chan *Client),
 		UnRegisterCh: make(chan *Client),
 		BroadcastCh:  make(chan []byte),
+		pubsub:       pubsub,
 	}
 }
 
@@ -26,9 +36,21 @@ func (h *Hub) RunLoop() {
 			h.unregister(client)
 
 		case msg := <-h.BroadcastCh:
-			h.broadCastToAllClient(msg)
+			h.publishMessage(msg)
 		}
 	}
+}
+
+func (h *Hub) SubscribeMessages() {
+	ch := h.pubsub.Subscribe(context.TODO(), broadCastChan)
+
+	for msg := range ch {
+		h.broadCastToAllClient([]byte(msg.Payload))
+	}
+}
+
+func (h *Hub) publishMessage(msg []byte) {
+	h.pubsub.Publish(context.TODO(), broadCastChan, msg)
 }
 
 func (h *Hub) register(c *Client) {

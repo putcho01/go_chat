@@ -7,10 +7,13 @@ import (
 
 	"github.com/putcho01/go_chat/src/domain"
 	"github.com/putcho01/go_chat/src/handlers"
+	"github.com/putcho01/go_chat/src/services"
 )
 
 func main() {
-	hub := domain.NewHub()
+	pubsub := services.NewPubSubService()
+	hub := domain.NewHub(pubsub)
+	go hub.SubscribeMessages()
 	go hub.RunLoop()
 
 	http.HandleFunc("/ws", handlers.NewWebsocketHandler(hub).Handle)
